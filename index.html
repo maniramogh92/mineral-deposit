@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reading the Ground from Orbit — Team Briefing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* light cartographic base */
+    --paper:#FFFFFF;
+    --paper-2:#F4F8FD;
+    --mist:#EAF1FA;
+    --hairline:#D8E3EF;
+    --hairline-soft:#E8EFF6;
+    /* ink — deep ocean navy */
+    --ink:#10283B;
+    --ink-dim:#4C6377;
+    --ink-faint:#869AAD;
+    /* blues — the cool "terrain" family */
+    --navy:#0B3A63;
+    --blue:#1E6FD9;
+    --blue-soft:#5B95E6;
+    --cyan:#0E97A8;
+    /* the one warm accent — the mineral signal */
+    --ore:#E08A1E;
+    --ore-deep:#B16707;
+    /* band hues */
+    --b-blue:#3B7BD0;--b-green:#4FA35C;--b-red:#D2533F;--b-nir:#8E6BD0;--b-iron:#E08A1E;
+    --shadow:0 1px 2px rgba(16,40,59,.04), 0 10px 30px rgba(16,40,59,.07);
+    --shadow-lift:0 2px 4px rgba(16,40,59,.05), 0 18px 44px rgba(16,40,59,.11);
+    --maxw:1120px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Hanken Grotesk",system-ui,sans-serif;
+    font-size:17.5px;line-height:1.62;-webkit-font-smoothing:antialiased;
+    background-image:
+      radial-gradient(900px 560px at 90% -10%, rgba(30,111,217,.07), transparent 60%),
+      radial-gradient(760px 640px at -6% 104%, rgba(14,151,168,.06), transparent 58%);
+    background-attachment:fixed;
+  }
+  .wrap{max-width:var(--maxw);margin:0 auto;padding:0 28px}
+  .mono{font-family:"IBM Plex Mono",monospace}
+  h1,h2,h3,h4{font-family:"Instrument Serif",Georgia,serif;font-weight:400;line-height:1.05;letter-spacing:.005em;color:var(--navy)}
+  a{color:var(--blue)}
+  ::selection{background:rgba(30,111,217,.18)}
+  .eyebrow{font-family:"IBM Plex Mono",monospace;font-size:11.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--ink-faint)}
+
+  .contours{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.7}
+  .contours svg{width:100%;height:100%}
+  .contours path{fill:none;stroke:#D3E2F1;stroke-width:1}
+  main,header,footer{position:relative;z-index:1}
+
+  /* HERO */
+  header{border-bottom:1px solid var(--hairline);padding:54px 0 0}
+  .hero-top{display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap}
+  .badge{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-dim);border:1px solid var(--hairline);border-radius:999px;padding:7px 16px;background:var(--paper)}
+  h1{font-size:clamp(46px,8.5vw,104px);margin:30px 0 0;letter-spacing:-.01em;max-width:13ch;color:var(--navy)}
+  h1 em{font-style:italic;color:var(--blue)}
+  .lede{font-size:clamp(18px,2.1vw,22px);color:var(--ink-dim);max-width:60ch;margin:24px 0 0;line-height:1.55}
+
+  .signal{margin:46px 0 0;padding-bottom:54px}
+  .signal svg{width:100%;height:auto;display:block;overflow:visible}
+  .draw{stroke-dasharray:2600;stroke-dashoffset:2600;animation:draw 2.4s cubic-bezier(.22,.61,.36,1) .25s forwards}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  .fade{opacity:0;animation:fade .8s ease 1.9s forwards}
+  @keyframes fade{to{opacity:1}}
+  @media (prefers-reduced-motion:reduce){.draw{animation:none;stroke-dashoffset:0}.fade{animation:none;opacity:1}}
+  .sig-caption{display:flex;gap:10px 30px;flex-wrap:wrap;margin-top:20px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-dim)}
+  .sig-caption span{display:inline-flex;align-items:center;gap:8px}
+  .chip{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+  /* SECTIONS */
+  section{padding:74px 0;border-bottom:1px solid var(--hairline)}
+  .marker{display:flex;align-items:baseline;gap:16px}
+  .marker .no{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--blue);letter-spacing:.1em}
+  .marker .rule{flex:1;height:1px;background:var(--hairline)}
+  h2{font-size:clamp(32px,5vw,54px);margin:18px 0 0;max-width:18ch;letter-spacing:-.005em}
+  .intro{color:var(--ink-dim);max-width:62ch;margin:18px 0 0;font-size:18.5px}
+  p{margin:18px 0}
+
+  .pull{border-left:3px solid var(--blue);padding:6px 0 6px 26px;margin:30px 0;font-family:"Instrument Serif",serif;font-size:clamp(22px,3vw,30px);line-height:1.25;color:var(--navy)}
+  .pull em{color:var(--blue);font-style:italic}
+
+  .twocol{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:36px}
+  .card{background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:30px;box-shadow:var(--shadow);transition:box-shadow .25s,transform .25s,border-color .25s}
+  .card:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}
+  .card.can:hover{border-color:var(--cyan)}
+  .card.cant:hover{border-color:var(--ore)}
+  .card h3{font-size:26px;margin:0 0 4px}
+  .card.can h3{color:var(--cyan)}
+  .card.cant h3{color:var(--ore-deep)}
+  .card ul{margin:16px 0 0;padding:0;list-style:none}
+  .card li{position:relative;padding:11px 0 11px 28px;color:var(--ink-dim);border-top:1px solid var(--hairline-soft);font-size:16px}
+  .card li:first-child{border-top:none}
+  .card li::before{position:absolute;left:0;top:11px;font-family:"IBM Plex Mono",monospace;font-weight:600}
+  .card.can li::before{content:"+";color:var(--cyan)}
+  .card.cant li::before{content:"\2013";color:var(--ore-deep)}
+  .verdict{margin-top:30px;padding:26px 30px;border-radius:16px;background:linear-gradient(115deg,var(--mist),#F6FAFE);border:1px solid var(--hairline)}
+  .verdict .lab{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--blue);display:block;margin-bottom:10px}
+  .verdict p{margin:0;font-family:"Instrument Serif",serif;font-size:clamp(21px,2.6vw,27px);line-height:1.3;color:var(--navy)}
+  .verdict em{color:var(--ore-deep);font-style:italic}
+
+  .bands{margin-top:34px;border:1px solid var(--hairline);border-radius:16px;overflow:hidden;background:var(--paper);box-shadow:var(--shadow)}
+  .brow{display:grid;grid-template-columns:160px 96px 1fr;gap:18px;align-items:center;padding:18px 26px;border-top:1px solid var(--hairline-soft);transition:background .2s}
+  .brow:first-child{border-top:none}
+  .brow:hover{background:var(--paper-2)}
+  .bname{display:flex;align-items:center;gap:14px;font-weight:600;font-size:16.5px;color:var(--ink)}
+  .bname .sw{width:6px;height:38px;border-radius:4px;flex:none}
+  .bwl{font-family:"IBM Plex Mono",monospace;color:var(--ink-dim);font-size:14px}
+  .buse{color:var(--ink-dim);font-size:15.5px}
+
+  .paths{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:36px}
+  .path{background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:32px;box-shadow:var(--shadow);transition:transform .25s,box-shadow .25s}
+  .path:hover{transform:translateY(-3px);box-shadow:var(--shadow-lift)}
+  .path.a{border-top:3px solid var(--blue)}
+  .path.b{border-top:3px solid var(--cyan)}
+  .path .tier{font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+  .path h3{font-size:28px;margin:10px 0 6px}
+  .formula{font-family:"IBM Plex Mono",monospace;background:var(--mist);border:1px solid var(--hairline);border-radius:10px;padding:13px 17px;margin:13px 0;color:var(--navy);font-size:14.5px}
+  .pros{margin:18px 0 0;padding:0;list-style:none;font-size:15.5px}
+  .pros li{padding:6px 0 6px 24px;position:relative;color:var(--ink-dim)}
+  .pros li::before{position:absolute;left:0;font-family:"IBM Plex Mono",monospace}
+  .pros li.y::before{content:"\2713";color:var(--cyan)}
+  .pros li.n::before{content:"!";color:var(--ore-deep)}
+
+  .sim{background:var(--paper);border:1px solid var(--hairline);border-radius:20px;padding:34px;margin-top:36px;box-shadow:var(--shadow)}
+  .simgrid{display:grid;grid-template-columns:1.4fr 1fr;gap:38px;align-items:start}
+  #grid{display:grid;gap:3px;width:100%}
+  .cell{aspect-ratio:1;border-radius:3px;transition:background .18s,box-shadow .18s}
+  @media (prefers-reduced-motion:reduce){.cell{transition:none}}
+  .legend{display:flex;gap:20px;flex-wrap:wrap;margin-top:20px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-dim)}
+  .legend span{display:inline-flex;align-items:center;gap:8px}
+  .ctrl .field{margin-bottom:24px}
+  .ctrl label{display:block;font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 8px}
+  .ctrl .v{color:var(--ore-deep);float:right}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:5px;background:var(--mist);border:1px solid var(--hairline);border-radius:5px;outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--blue);cursor:pointer;border:4px solid var(--paper);box-shadow:0 0 0 1px var(--hairline),var(--shadow)}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:var(--blue);cursor:pointer;border:4px solid var(--paper)}
+  input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 4px rgba(30,111,217,.3)}
+  .readout{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:6px}
+  .stat{background:var(--paper-2);border:1px solid var(--hairline);border-radius:12px;padding:14px}
+  .stat .num{font-family:"Instrument Serif",serif;font-size:38px;line-height:.9}
+  .stat .lab{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin-top:8px}
+  #interp{margin-top:20px;padding:16px 20px;border-radius:12px;background:var(--paper-2);border:1px solid var(--hairline);color:var(--ink-dim);font-size:15.5px;min-height:24px}
+
+  .pipe{display:flex;margin-top:36px;flex-wrap:wrap}
+  .stage{flex:1;min-width:160px;background:var(--paper);border:1px solid var(--hairline);padding:24px}
+  .stage:first-child{border-radius:16px 0 0 16px}
+  .stage:last-child{border-radius:0 16px 16px 0}
+  .stage + .stage{border-left:none}
+  .stage .k{font-family:"IBM Plex Mono",monospace;font-size:10.5px;letter-spacing:.1em;color:var(--blue)}
+  .stage h4{font-size:23px;margin:10px 0 8px}
+  .stage p{margin:0;font-size:14.5px;color:var(--ink-dim);line-height:1.5}
+
+  .steps{margin-top:36px;counter-reset:s}
+  .step{display:grid;grid-template-columns:72px 1fr;gap:26px;padding:26px 0;border-top:1px solid var(--hairline);align-items:start}
+  .step:first-child{border-top:none}
+  .step .n{counter-increment:s;font-family:"Instrument Serif",serif;font-size:44px;color:var(--blue);line-height:.85}
+  .step .n::before{content:counter(s,decimal-leading-zero)}
+  .step h3{font-size:24px;margin:0 0 6px}
+  .step p{margin:0;color:var(--ink-dim);font-size:16.5px}
+  .flag{display:inline-block;margin-top:12px;font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ore-deep);background:#FCF1E0;border:1px solid #F0D9B4;padding:6px 13px;border-radius:8px;line-height:1.4}
+
+  .tp{background:var(--paper);border:1px solid var(--hairline);border-radius:16px;padding:10px 32px;margin-top:32px;box-shadow:var(--shadow)}
+  .tp .item{padding:20px 0;border-top:1px solid var(--hairline-soft);display:grid;grid-template-columns:170px 1fr;gap:20px;align-items:baseline}
+  .tp .item:first-child{border-top:none}
+  .tp .q{font-family:"IBM Plex Mono",monospace;color:var(--blue);font-size:13px;letter-spacing:.04em}
+  .tp .a{color:var(--ink);font-size:16.5px}
+
+  .gloss{columns:2;column-gap:44px;margin-top:32px}
+  .gloss dt{font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--blue);font-size:14px;break-after:avoid}
+  .gloss dd{margin:4px 0 20px;color:var(--ink-dim);font-size:15.5px;break-before:avoid}
+
+  footer{padding:50px 0 76px;color:var(--ink-faint);font-size:13.5px;font-family:"IBM Plex Mono",monospace;line-height:1.7}
+
+  @media (max-width:840px){
+    .twocol,.paths,.simgrid,.gloss{grid-template-columns:1fr;columns:1}
+    .pipe{flex-direction:column}
+    .stage{border-radius:16px!important;border-left:1px solid var(--hairline)!important}
+    .stage + .stage{border-top:none}
+    .brow{grid-template-columns:1fr;gap:5px}
+    .bwl{order:3}
+    .tp .item{grid-template-columns:1fr;gap:6px}
+  }
+</style>
+</head>
+<body>
+
+<div class="contours" aria-hidden="true">
+  <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <path d="M-50,180 C260,90 520,300 760,220 1020,135 1240,320 1500,240"/>
+    <path d="M-50,300 C260,210 520,420 760,340 1020,255 1240,440 1500,360"/>
+    <path d="M-50,440 C300,360 540,560 800,470 1060,385 1260,560 1500,500"/>
+    <path d="M-50,600 C280,520 560,700 820,610 1080,525 1280,690 1500,640"/>
+    <path d="M-50,760 C300,690 560,840 840,760 1100,685 1300,820 1500,780"/>
+  </svg>
+</div>
+
+<header>
+  <div class="wrap">
+    <div class="hero-top">
+      <span class="eyebrow">Team briefing &middot; 600-acre lease</span>
+      <span class="badge">Multispectral mineral exploration</span>
+    </div>
+    <h1>Reading the ground in <em>light we can't see</em>.</h1>
+    <p class="lede">Every mineral leaves a fingerprint in infrared light. A satellite reads those fingerprints across the whole lease in one pass. This page is how the team understands the method — and how we build the model behind it, without overselling what it can do.</p>
+
+    <div class="signal" aria-label="A mineral reflectance curve across wavelength. The diagnostic dips that identify minerals sit in the infrared, beyond human vision.">
+      <svg viewBox="0 0 1000 380" role="img">
+        <defs>
+          <linearGradient id="vis" x1="0" x2="1" y1="0" y2="0">
+            <stop offset="0" stop-color="#4f7fd0"/><stop offset=".4" stop-color="#6fb76b"/>
+            <stop offset=".75" stop-color="#d8b24a"/><stop offset="1" stop-color="#d85b52"/>
+          </linearGradient>
+          <linearGradient id="glow" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0" stop-color="rgba(30,111,217,.16)"/><stop offset="1" stop-color="rgba(30,111,217,0)"/>
+          </linearGradient>
+        </defs>
+        <rect x="60" y="60" width="118" height="240" fill="url(#vis)" opacity=".16"/>
+        <text x="119" y="48" text-anchor="middle" class="fade" fill="var(--ink-dim)" font-family="IBM Plex Mono, monospace" font-size="12">eyes see this</text>
+        <path class="fade" d="M178,44 L178,300" stroke="var(--hairline)" stroke-width="1" stroke-dasharray="3 4"/>
+        <text x="560" y="48" text-anchor="middle" class="fade" fill="var(--blue)" font-family="IBM Plex Mono, monospace" font-size="12">the satellite reads everything &mdash; the fingerprint lives out here &rarr;</text>
+        <line x1="60" y1="300" x2="940" y2="300" stroke="var(--hairline)" stroke-width="1"/>
+        <path class="fade" d="M60,210 C120,196 150,188 178,176 C230,150 280,138 330,134 C380,130 400,150 420,158 C450,170 470,150 520,142 C600,128 660,134 700,184 C730,222 760,196 800,188 C820,184 835,196 845,214 C858,238 880,196 910,182 L940,176 L940,300 L60,300 Z" fill="url(#glow)"/>
+        <path class="draw" d="M60,210 C120,196 150,188 178,176 C230,150 280,138 330,134 C380,130 400,150 420,158 C450,170 470,150 520,142 C600,128 660,134 700,184 C730,222 760,196 800,188 C820,184 835,196 845,214 C858,238 880,196 910,182 L940,176"
+          fill="none" stroke="var(--navy)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <g class="fade">
+          <circle cx="845" cy="214" r="5.5" fill="var(--paper)" stroke="var(--ore)" stroke-width="2.5"/>
+          <line x1="845" y1="214" x2="845" y2="92" stroke="var(--ore)" stroke-width="1" stroke-dasharray="2 4"/>
+          <text x="845" y="84" text-anchor="middle" fill="var(--ore-deep)" font-family="IBM Plex Mono, monospace" font-size="12">clay absorption</text>
+          <text x="845" y="68" text-anchor="middle" fill="var(--ink-dim)" font-family="IBM Plex Mono, monospace" font-size="10">the diagnostic dip</text>
+        </g>
+        <g font-family="IBM Plex Mono, monospace" font-size="10" fill="var(--ink-faint)">
+          <line x1="79"  y1="300" x2="79"  y2="308" stroke="var(--b-blue)" stroke-width="2"/>
+          <line x1="112" y1="300" x2="112" y2="308" stroke="var(--b-green)" stroke-width="2"/>
+          <line x1="162" y1="300" x2="162" y2="308" stroke="var(--b-red)" stroke-width="2"/>
+          <line x1="257" y1="300" x2="257" y2="308" stroke="var(--b-nir)" stroke-width="2"/><text x="257" y="324" text-anchor="middle">NIR</text>
+          <line x1="612" y1="300" x2="612" y2="308" stroke="var(--b-iron)" stroke-width="2"/><text x="612" y="324" text-anchor="middle">SWIR1</text>
+          <line x1="888" y1="300" x2="888" y2="308" stroke="var(--ore-deep)" stroke-width="2"/><text x="888" y="324" text-anchor="middle">SWIR2</text>
+          <text x="60" y="352" fill="var(--ink-faint)" font-size="11">450 nm</text>
+          <text x="940" y="352" text-anchor="end" fill="var(--ink-faint)">2300 nm &mdash; deeper infrared &rarr;</text>
+        </g>
+      </svg>
+      <div class="sig-caption">
+        <span><i class="chip" style="background:var(--navy)"></i>reflectance of a clay-bearing rock</span>
+        <span><i class="chip" style="background:var(--b-nir)"></i>NIR &mdash; separates plants from rock</span>
+        <span><i class="chip" style="background:var(--ore)"></i>SWIR &mdash; iron & clay</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap">
+    <div class="marker"><span class="no">01</span><span class="rule"></span></div>
+    <h2>The core idea, in one breath</h2>
+    <p class="intro">Light bounces off rock differently depending on what minerals are in it. Our eyes read three slices of that light. The satellite reads six — three of them invisible to us — and those invisible slices are exactly where rock chemistry shows up.</p>
+    <p class="pull">A doctor's X-ray sees bone through skin because it uses light beyond human vision. We do the same to the ground: the satellite's infrared sight reads the <em>surface chemistry of rock</em> across all 600 acres in a single pass.</p>
+    <p>We download cloud-free satellite images of the lease, stack the six bands together, then either run simple chemistry math over them or train a model to highlight the patches whose fingerprint matches our target. The result is a heat-map of spots worth a closer look.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="marker"><span class="no">02</span><span class="rule"></span></div>
+    <h2>Be clear about what this does — and doesn't</h2>
+    <p class="intro">This is the slide that keeps us honest. Promising "we'll find the deposit from space" is the fastest way to lose a geologist's trust.</p>
+    <div class="twocol">
+      <div class="card can">
+        <h3>What it can do</h3>
+        <ul>
+          <li>Map surface rock chemistry and alteration across the whole lease, fast and cheap.</li>
+          <li>Spot clay alteration and iron-staining that often sit near mineralisation.</li>
+          <li>Shrink 600 acres to a handful of priority targets to walk and sample.</li>
+          <li>Re-run over time to compare seasons and acquisitions.</li>
+        </ul>
+      </div>
+      <div class="card cant">
+        <h3>What it can't do</h3>
+        <ul>
+          <li>See through soil, vegetation, or overburden — it reads the surface skin only.</li>
+          <li>Confirm a deposit; only field sampling and drilling can.</li>
+          <li>See through clouds, or where thick plant cover hides the rock.</li>
+          <li>Replace a geologist's judgement — it gives leads, not conclusions.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="verdict">
+      <span class="lab">The honest goal</span>
+      <p>Not finding the deposit from orbit — <em>prioritising</em>. Turning a large, undifferentiated lease into a ranked shortlist worth boots and a drill rig.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="marker"><span class="no">03</span><span class="rule"></span></div>
+    <h2>The six bands of light we use</h2>
+    <p class="intro">What Sentinel-2 / Landsat / HLS satellites record — and the same six the foundation model was trained on, which is why they line up.</p>
+    <div class="bands">
+      <div class="brow"><div class="bname"><span class="sw" style="background:var(--b-blue)"></span>Blue</div><div class="bwl">~490 nm</div><div class="buse">Ordinary colour; water and atmosphere.</div></div>
+      <div class="brow"><div class="bname"><span class="sw" style="background:var(--b-green)"></span>Green</div><div class="bwl">~560 nm</div><div class="buse">Ordinary colour; vegetation vigour.</div></div>
+      <div class="brow"><div class="bname"><span class="sw" style="background:var(--b-red)"></span>Red</div><div class="bwl">~665 nm</div><div class="buse">Ordinary colour; iron-oxide staining shows here too.</div></div>
+      <div class="brow"><div class="bname"><span class="sw" style="background:var(--b-nir)"></span>Narrow NIR</div><div class="bwl">~865 nm</div><div class="buse">Near-infrared. Plants glow here — we use it to <em>filter vegetation out</em> so it doesn't mask the rock.</div></div>
+      <div class="brow"><div class="bname"><span class="sw" style="background:var(--b-iron)"></span>SWIR 1</div><div class="bwl">~1610 nm</div><div class="buse">Short-wave infrared. Where iron-bearing and clay minerals reveal themselves.</div></div>
+      <div class="brow"><div class="bname"><span class="sw" style="background:var(--ore-deep)"></span>SWIR 2</div><div class="bwl">~2190 nm</div><div class="buse">Deeper short-wave infrared. Clays, micas and carbonates absorb strongly — the dip in the curve above.</div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="marker"><span class="no">04</span><span class="rule"></span></div>
+    <h2>Two ways to find the targets</h2>
+    <p class="intro">You don't have to start with deep learning. For one small lease the simple route is often more defensible. Here's the honest trade-off.</p>
+    <div class="paths">
+      <div class="path a">
+        <span class="tier">Path A &middot; start here</span>
+        <h3>Spectral index maps</h3>
+        <p style="color:var(--ink-dim);font-size:15.5px;margin:8px 0 0">Plain band-ratio math. Divide one band by another and it spikes where a target mineral is present. Threshold it, paint it on a map.</p>
+        <div class="formula">Clay&nbsp;Index&nbsp;&nbsp;= SWIR1 / SWIR2</div>
+        <div class="formula">Ferrous&nbsp;Index = SWIR1 / NIR</div>
+        <ul class="pros">
+          <li class="y">No training data needed</li>
+          <li class="y">Fully transparent — you can explain every pixel</li>
+          <li class="y">Runs in minutes; ideal for 600 acres</li>
+          <li class="n">Misses subtle multi-band combinations</li>
+        </ul>
+      </div>
+      <div class="path b">
+        <span class="tier">Path B &middot; scale up later</span>
+        <h3>Fine-tuned AI model</h3>
+        <p style="color:var(--ink-dim);font-size:15.5px;margin:8px 0 0">IBM &amp; NASA's Prithvi-EO-2.0 — a foundation model already trained on millions of satellite images. We adapt it to our target rather than train from scratch.</p>
+        <ul class="pros" style="margin-top:22px">
+          <li class="y">Learns patterns indices can't express</li>
+          <li class="y">Improves as you feed it verified results</li>
+          <li class="n">Needs labelled examples of known mineralisation</li>
+          <li class="n">Overfits easily on a tiny area — handle with care</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:26px;color:var(--ink-dim)"><strong style="color:var(--ore-deep);font-weight:600">Recommendation:</strong> prove the concept with Path A, graduate to Path B once we have ground-truthed labels worth learning from.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="marker"><span class="no">05</span><span class="rule"></span></div>
+    <h2>Try it: the spectral filter, live</h2>
+    <p class="intro">A toy lease — each tile has its own band readings. Move the sliders to filter for clay and iron signatures and suppress vegetation. Seven tiles secretly hold the target; see how well the filter catches them without crying wolf.</p>
+    <div class="sim">
+      <div class="simgrid">
+        <div>
+          <div id="grid" aria-label="Simulated lease grid"></div>
+          <div class="legend">
+            <span><i class="chip" style="background:#C7D6E6"></i>bare rock</span>
+            <span><i class="chip" style="background:#8FBF9E"></i>vegetation</span>
+            <span><i class="chip" style="background:var(--ore)"></i>flagged target</span>
+            <span><i class="chip" style="background:transparent;box-shadow:inset 0 0 0 1.5px var(--navy)"></i>actual deposit</span>
+          </div>
+        </div>
+        <div class="ctrl">
+          <div class="field"><label>Clay index threshold <span class="v" id="clayVal">1.30</span></label><input type="range" id="clay" min="1.0" max="2.0" step="0.02" value="1.30"></div>
+          <div class="field"><label>Ferrous index threshold <span class="v" id="ferrVal">1.30</span></label><input type="range" id="ferr" min="0.5" max="2.5" step="0.02" value="1.30"></div>
+          <div class="field"><label>Vegetation suppression <span class="v" id="vegVal">0.42</span></label><input type="range" id="veg" min="0.30" max="0.70" step="0.01" value="0.42"></div>
+          <div class="readout">
+            <div class="stat"><div class="num" id="sFlag" style="color:var(--ore-deep)">0</div><div class="lab">tiles flagged</div></div>
+            <div class="stat"><div class="num" id="sRecall" style="color:var(--cyan)">0%</div><div class="lab">deposits caught</div></div>
+            <div class="stat"><div class="num" id="sPrec" style="color:var(--blue)">0%</div><div class="lab">flags that are real</div></div>
+          </div>
+          <div id="interp"></div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:24px;color:var(--ink-dim)">Loosen the filters and you catch every deposit but flag worthless ground with it; tighten them and the flags get clean but you miss real targets. <strong style="color:var(--ore-deep);font-weight:600">That trade-off is what "training a model properly" manages</strong> — and why we measure it honestly (step 07).</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="marker"><span class="no">06</span><span class="rule"></span></div>
+    <h2>How the AI model actually works</h2>
+    <p class="intro">No magic — a four-part assembly line. The encoder comes pre-built by IBM and NASA; we only build and train the last part.</p>
+    <div class="pipe">
+      <div class="stage"><span class="k">INPUT</span><h4>Six-band tiles</h4><p>The lease image, cut into small squares, each carrying all six light-bands.</p></div>
+      <div class="stage"><span class="k">ENCODER · PRE-TRAINED</span><h4>Prithvi backbone</h4><p>A Vision Transformer that already knows what Earth looks like in these bands. It reads each tile and summarises what's there.</p></div>
+      <div class="stage"><span class="k">DECODER · WE BUILD</span><h4>Segmentation head</h4><p>Paints the encoder's summary back to full size as a per-pixel score: how mineral-likely is this spot?</p></div>
+      <div class="stage"><span class="k">OUTPUT</span><h4>Probability map</h4><p>The lease, every pixel coloured by confidence. The bright spots are our shortlist.</p></div>
+    </div>
+    <p class="pull" style="margin-top:38px"><em>Why Prithvi, not an ordinary image AI?</em> A standard model learns from cat-and-car photos in plain RGB. Prithvi learned from real satellite imagery in these exact six bands — we're hiring an expert and teaching it one new task, not raising a beginner.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="marker"><span class="no">07</span><span class="rule"></span></div>
+    <h2>How to train it properly</h2>
+    <p class="intro">The part that separates a real result from a demo that fools us. In order. The red flags are the mistakes that quietly ruin geospatial models.</p>
+    <div class="steps">
+      <div class="step"><div class="n"></div><div><h3>Define the target and gather labels</h3><p>Decide exactly what we're hunting, then collect known examples — past drill hits, mapped occurrences, field-verified spots. A model can only learn from labelled truth.</p><span class="flag">No labels? Don't fake it — fall back to Path A index maps or unsupervised anomaly detection.</span></div></div>
+      <div class="step"><div class="n"></div><div><h3>Acquire and clean the imagery</h3><p>Pull cloud-free Sentinel-2 / Landsat / HLS scenes with all six bands. Apply atmospheric correction so values mean the same across dates, and align every band to one resolution.</p></div></div>
+      <div class="step"><div class="n"></div><div><h3>Cut into tiles and normalise</h3><p>Chop the scene into model-sized tiles and scale band values into the range the model expects. Consistency here prevents a lot of mysterious failures later.</p></div></div>
+      <div class="step"><div class="n"></div><div><h3>Split the data spatially — not randomly</h3><p>Hold out a whole separate region for testing. Neighbouring pixels are nearly identical, so a random split lets the model peek at the answers and report fictional scores.</p><span class="flag">Random train/test split = the #1 way to get a great-looking model that's useless in the field.</span></div></div>
+      <div class="step"><div class="n"></div><div><h3>Fine-tune the model</h3><p>Keep Prithvi's knowledge mostly frozen and train the new decoder head with a small learning rate, augmentation and early stopping. On 600 acres the danger is memorising, not learning — keep it on a short leash.</p></div></div>
+      <div class="step"><div class="n"></div><div><h3>Use a loss built for rarity</h3><p>Targets are a tiny fraction of all pixels. Combine Binary Cross-Entropy with Dice loss so the model is rewarded for finding rare positives, not for labelling everything "empty" and scoring 99%.</p></div></div>
+      <div class="step"><div class="n"></div><div><h3>Validate honestly on held-out ground</h3><p>Judge it only on the region it never trained on, using IoU, F1 and the precision/recall trade-off from the simulator. A model that aces training and flops on new land learned nothing.</p></div></div>
+      <div class="step"><div class="n"></div><div><h3>Predict across the full lease</h3><p>Run the trained model over every tile to produce the probability heat-map and rank the targets.</p></div></div>
+      <div class="step"><div class="n"></div><div><h3>Ground-truth, then feed it back</h3><p>Send crews to the top targets. Every confirmation or miss becomes a new label that improves the next model. The map is a hypothesis until the field proves it.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="marker"><span class="no">08</span><span class="rule"></span></div>
+    <h2>What to tell the client, in their words</h2>
+    <p class="intro">Five lines anyone on the team can repeat without overpromising.</p>
+    <div class="tp">
+      <div class="item"><div class="q">Surface only</div><div class="a">We read the chemistry of exposed rock — we don't see buried ore.</div></div>
+      <div class="item"><div class="q">Prioritise</div><div class="a">The output is a ranked shortlist of targets, not a discovery.</div></div>
+      <div class="item"><div class="q">Verify</div><div class="a">Field sampling and drilling confirm or kill each lead.</div></div>
+      <div class="item"><div class="q">Small-area caution</div><div class="a">600 acres is little data; start with transparent index maps, add AI once we have verified labels.</div></div>
+      <div class="item"><div class="q">Honest metrics</div><div class="a">We report performance on ground the model never saw, so the numbers mean something.</div></div>
+    </div>
+  </div>
+</section>
+
+<section style="border-bottom:none">
+  <div class="wrap">
+    <div class="marker"><span class="no">09</span><span class="rule"></span></div>
+    <h2>Plain-English glossary</h2>
+    <dl class="gloss">
+      <dt>Band</dt><dd>One slice of light at a specific wavelength the satellite records separately.</dd>
+      <dt>Multispectral</dt><dd>Capturing several bands at once, including invisible infrared.</dd>
+      <dt>NIR</dt><dd>Near-infrared. Just past red; plants are very bright here.</dd>
+      <dt>SWIR</dt><dd>Short-wave infrared. Deeper infrared where clays and iron minerals reveal themselves.</dd>
+      <dt>Spectral index</dt><dd>A band-ratio that spikes where a target mineral is present.</dd>
+      <dt>Foundation model</dt><dd>A large model pre-trained on huge data that you adapt instead of training from zero.</dd>
+      <dt>Prithvi-EO-2.0</dt><dd>IBM &amp; NASA's Earth-observation foundation model, trained on satellite imagery.</dd>
+      <dt>Vision Transformer</dt><dd>The model's design: reads an image as a grid of patches and learns how they relate.</dd>
+      <dt>Fine-tuning</dt><dd>Lightly retraining a pre-built model for a specific new job.</dd>
+      <dt>Segmentation</dt><dd>Labelling every pixel — here, scoring each as mineral-likely or not.</dd>
+      <dt>Overfitting</dt><dd>Memorising the training data instead of the pattern; useless on new ground.</dd>
+      <dt>Spatial split</dt><dd>Testing on a geographically separate area so scores aren't inflated by lookalike neighbours.</dd>
+      <dt>IoU / Dice</dt><dd>Scores for how well predicted areas overlap the true areas.</dd>
+      <dt>Ground-truth</dt><dd>Real-world checking — field sampling or drilling that confirms the map.</dd>
+    </dl>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    Team briefing &middot; multispectral mineral exploration<br>
+    Palette note — cool blues are the terrain; the one warm accent is the signal we hunt: <span style="color:var(--navy)">navy = ink / structure</span> &middot; <span style="color:var(--blue)">blue = primary</span> &middot; <span style="color:var(--cyan)">teal = model output</span> &middot; <span style="color:var(--ore-deep)">amber = the mineral target</span>.
+  </div>
+</footer>
+
+<script>
+(function(){
+  var COLS=20, ROWS=12;
+  var grid=document.getElementById('grid');
+  grid.style.gridTemplateColumns='repeat('+COLS+',1fr)';
+  var seed=1337;
+  function rnd(){ seed=(seed*1103515245+12345)&0x7fffffff; return seed/0x7fffffff; }
+  function di(r,c){return r*COLS+c;}
+  var deposits={};
+  [[3,5],[3,6],[4,5],[4,6],[5,6],[7,13],[9,3]].forEach(function(p){deposits[di(p[0],p[1])]=true;});
+  function isVeg(r,c){ return (r>=8 && c>=1 && c<=5) || (r===2 && c>=14 && c<=18); }
+
+  var cells=[];
+  for(var r=0;r<ROWS;r++) for(var c=0;c<COLS;c++){
+    var idx=di(r,c),nir,s1,s2,type;
+    if(deposits[idx]){ type='deposit'; s1=0.38+rnd()*0.06; s2=0.22+rnd()*0.03; nir=0.16+rnd()*0.04; }
+    else if(isVeg(r,c)){ type='veg'; nir=0.52+rnd()*0.12; s1=0.19+rnd()*0.04; s2=0.18+rnd()*0.03; }
+    else { type='rock'; var hot=rnd()<0.10; s1=(hot?0.30:0.21)+rnd()*0.05; s2=0.20+rnd()*0.04; nir=0.24+rnd()*0.06; }
+    var el=document.createElement('div'); el.className='cell'; el.title=type;
+    if(deposits[idx]) el.style.boxShadow='inset 0 0 0 1.5px var(--navy)';
+    grid.appendChild(el);
+    cells.push({el:el,nir:nir,s1:s1,s2:s2,type:type,dep:!!deposits[idx]});
+  }
+
+  var clay=document.getElementById('clay'),ferr=document.getElementById('ferr'),veg=document.getElementById('veg');
+  function update(){
+    var ct=+clay.value,ft=+ferr.value,vt=+veg.value;
+    document.getElementById('clayVal').textContent=ct.toFixed(2);
+    document.getElementById('ferrVal').textContent=ft.toFixed(2);
+    document.getElementById('vegVal').textContent=vt.toFixed(2);
+    var flagged=0,caught=0,total=0;
+    cells.forEach(function(cl){
+      if(cl.dep) total++;
+      var ci=cl.s1/cl.s2, fi=cl.s1/cl.nir, isV=cl.nir>vt;
+      var pass=!isV && ci>=ct && fi>=ft;
+      var bg='#C7D6E6'; if(cl.type==='veg') bg='#8FBF9E';
+      if(pass){ bg='var(--ore)'; cl.el.style.boxShadow= cl.dep?'0 0 0 1.5px var(--navy), 0 2px 7px rgba(224,138,30,.5)':'0 2px 6px rgba(224,138,30,.4)'; }
+      else cl.el.style.boxShadow= cl.dep?'inset 0 0 0 1.5px var(--navy)':'none';
+      cl.el.style.background=bg;
+      if(pass){ flagged++; if(cl.dep) caught++; }
+    });
+    document.getElementById('sFlag').textContent=flagged;
+    var rec=total?Math.round(100*caught/total):0, pre=flagged?Math.round(100*caught/flagged):0;
+    document.getElementById('sRecall').textContent=rec+'%';
+    document.getElementById('sPrec').textContent=pre+'%';
+    var m;
+    if(flagged===0) m='Filters too tight — nothing passes. You\u2019d send the crew nowhere.';
+    else if(rec>=100&&pre>=60) m='Sweet spot: every deposit caught with few false alarms. This is what good training aims for.';
+    else if(rec>=100&&pre<60) m='Catching all deposits, but flagging a lot of worthless ground too (low precision).';
+    else if(rec<60) m='Too strict — missing real deposits to keep the map clean (low recall). Risky in exploration.';
+    else m='A working balance — trade false alarms against missed targets.';
+    document.getElementById('interp').textContent=m;
+  }
+  [clay,ferr,veg].forEach(function(s){ s.addEventListener('input',update); });
+  update();
+
+  if(!matchMedia('(prefers-reduced-motion: reduce)').matches){
+    var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.style.opacity=1;e.target.style.transform='none';io.unobserve(e.target);}});},{threshold:.12});
+    document.querySelectorAll('section').forEach(function(s){s.style.opacity=0;s.style.transform='translateY(18px)';s.style.transition='opacity .7s ease, transform .7s ease';io.observe(s);});
+  }
+})();
+</script>
+</body>
+</html>
